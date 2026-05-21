@@ -1,0 +1,8 @@
+build/
+*.user
+*.autosave
+CMakeCache.txt
+CMakeFiles/
+compile_commands.json
+*.qm
+po/*.mo
