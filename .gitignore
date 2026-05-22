@@ -1,6 +1,9 @@
 plasma6-applets-quickbar/
 build/
+pkg/
+package/
 scripts/
+*.tar.gz
 *.user
 *.autosave
 CMakeCache.txt

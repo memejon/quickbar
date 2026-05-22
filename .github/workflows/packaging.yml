@@ -49,12 +49,21 @@ jobs:
           cmake --build build
           test -f build/plasma/applets/org.quickbar.globalmenu.so
 
-      - name: Verify metadata version matches CMakeLists.txt
+      - name: Verify versions match across packaging files
         run: |
           cmake_ver=$(sed -n 's/^project(quickbar VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
           meta_ver=$(sed -n 's/.*"Version": "\([^"]*\)".*/\1/p' metadata.json)
-          echo "CMake: ${cmake_ver}, metadata: ${meta_ver}"
-          test "${cmake_ver}" = "${meta_ver}"
+          pkgbuild_ver=$(sed -n 's/^pkgver=\(.*\)/\1/p' packaging/arch/PKGBUILD)
+          deb_ver=$(sed -n '1s/^quickbar (\([0-9.]*\).*/\1/p' packaging/debian/changelog)
+          rpm_ver=$(sed -n 's/^Version:[[:space:]]*\(.*\)/\1/p' packaging/rpm/quickbar.spec)
+          echo "CMake: ${cmake_ver}"
+          echo "metadata: ${meta_ver}"
+          echo "PKGBUILD: ${pkgbuild_ver}"
+          echo "debian changelog: ${deb_ver}"
+          echo "rpm spec: ${rpm_ver}"
+          for ver in "${meta_ver}" "${pkgbuild_ver}" "${deb_ver}" "${rpm_ver}"; do
+            test "${cmake_ver}" = "${ver}"
+          done
 
       - name: Validate PKGBUILD with makepkg (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
