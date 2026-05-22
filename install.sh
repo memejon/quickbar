@@ -135,6 +135,7 @@ install_deps_arch() {
         kconfig
         kcoreaddons
         ki18n
+        kitemmodels
         kwindowsystem
         kirigami
     )
@@ -165,6 +166,7 @@ install_deps_debian() {
         libkf6config-dev
         libkf6coreaddons-dev
         libkf6i18n-dev
+        libkf6itemmodels-dev
         libkf6windowsystem-dev
         libkirigami-dev
     )
@@ -205,6 +207,7 @@ install_deps_fedora() {
         kf6-kconfig-devel
         kf6-kcoreaddons-devel
         kf6-ki18n-devel
+        kf6-kitemmodels-devel
         kf6-kwindowsystem-devel
         kf6-kirigami-devel
     )
@@ -242,6 +245,7 @@ install_deps_opensuse() {
         kf6-kconfig-devel
         kf6-kcoreaddons-devel
         kf6-ki18n-devel
+        kf6-kitemmodels-devel
         kf6-kwindowsystem-devel
         kf6-kirigami-devel
     )
@@ -269,19 +273,19 @@ Install Plasma 6 build dependencies manually, then re-run:
   Arch / CachyOS:
     sudo pacman -S --needed base-devel cmake extra-cmake-modules gcc \
       libplasma plasma-workspace qt6-base qt6-declarative \
-      kconfig kcoreaddons ki18n kwindowsystem kirigami
+      kconfig kcoreaddons ki18n kitemmodels kwindowsystem kirigami
 
   Debian / Ubuntu (Plasma 6):
     sudo apt install cmake extra-cmake-modules g++ \
       qt6-base-dev qt6-declarative-dev libplasma-dev plasma-workspace-dev \
-      libkf6config-dev libkf6coreaddons-dev libkf6i18n-dev \
+      libkf6config-dev libkf6coreaddons-dev libkf6i18n-dev libkf6itemmodels-dev \
       libkf6windowsystem-dev libkirigami-dev
 
   Fedora:
     sudo dnf install cmake extra-cmake-modules gcc-c++ \
       qt6-qtbase-devel qt6-qtdeclarative-devel libplasma-devel \
       plasma-workspace-devel kf6-kconfig-devel kf6-kcoreaddons-devel \
-      kf6-ki18n-devel kf6-kwindowsystem-devel kf6-kirigami-devel
+      kf6-ki18n-devel kf6-kitemmodels-devel kf6-kwindowsystem-devel kf6-kirigami-devel
 
   openSUSE:
     sudo zypper build-deps-install packaging/rpm/quickbar.spec

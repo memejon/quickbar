@@ -17,6 +17,7 @@ BuildRequires:  plasma-workspace-devel
 BuildRequires:  kf6-kconfig-devel
 BuildRequires:  kf6-kcoreaddons-devel
 BuildRequires:  kf6-ki18n-devel
+BuildRequires:  kf6-kitemmodels-devel
 BuildRequires:  kf6-kwindowsystem-devel
 BuildRequires:  kf6-kirigami-devel
 
