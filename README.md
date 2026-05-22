@@ -1,42 +1,42 @@
 # quickbar
 
-a plasma 6+ panel widget that shows the active application's global menu (the same dbus app-menu protocol as kde's built-in global menu), with far more appearance and behavior options.
+A Plasma 6+ panel widget that shows the active application's global menu (the same DBus app-menu protocol as KDE's built-in Global Menu), with far more appearance and behavior options.
 
-## requirements
+## Requirements
 
-- plasma 6.0+ (kf6 / qt6)
-- build deps: `cmake`, `extra-cmake-modules`, `libplasma`, `plasma-workspace` (libtaskmanager), kf6 dev packages, qt6 dev packages
+- Plasma 6.0+ (KF6 / Qt6)
+- Build deps: `cmake`, `extra-cmake-modules`, `libplasma`, `plasma-workspace` (LibTaskManager), KF6 dev packages, Qt6 dev packages
 
-on arch/cachyos:
+On Arch/CachyOS:
 
 ```bash
 sudo pacman -S libplasma plasma-workspace kconfig kcoreaddons ki18n kwindowsystem kirigami \
   extra-cmake-modules cmake gcc qt6-base qt6-declarative
 ```
 
-`libdbusmenuqt` is vendored from plasma-workspace (no separate arch package required).
+`libdbusmenuqt` is vendored from plasma-workspace (no separate Arch package required).
 
-## distribution (aur, apt, dnf)
+## Distribution (AUR, apt, dnf)
 
-pre-built packaging for several package managers lives under [`packaging/`](packaging/):
+Pre-built packaging for several package managers lives under [`packaging/`](packaging/):
 
-| platform | package name | install |
+| Platform | Package name | Install |
 |----------|--------------|---------|
-| arch / cachyos (aur) | `plasma6-applets-quickbar` | `yay -S plasma6-applets-quickbar` |
-| debian / ubuntu (plasma 6) | `quickbar` | build `.deb` from `packaging/debian/` |
-| fedora / opensuse | `quickbar` | build from `packaging/rpm/quickbar.spec` |
+| Arch / CachyOS (AUR) | `plasma6-applets-quickbar` | `yay -S plasma6-applets-quickbar` |
+| Debian / Ubuntu (Plasma 6) | `quickbar` | Build `.deb` from `packaging/debian/` |
+| Fedora / openSUSE | `quickbar` | Build from `packaging/rpm/quickbar.spec` |
 
-see [`packaging/README.md`](packaging/README.md) for publishing to the aur, building `.deb` / `.rpm` packages, and obs. aur listing text: [`packaging/arch/AUR.md`](packaging/arch/AUR.md). ci validates packaging on pull requests and release tags.
+See [`packaging/README.md`](packaging/README.md) for publishing to the AUR, building `.deb` / `.rpm` packages, and OBS. AUR listing text: [`packaging/arch/AUR.md`](packaging/arch/AUR.md). CI validates packaging on pull requests and release tags.
 
-## build & install
+## Build & install
 
-from a git checkout, `./install.sh` detects your distro (arch, debian/ubuntu, fedora, opensuse) and installs any missing build dependencies before compiling:
+From a git checkout, `./install.sh` detects your distro (Arch, Debian/Ubuntu, Fedora, openSUSE) and installs any missing build dependencies before compiling:
 
 ```bash
 ./install.sh
 ```
 
-manual build:
+Manual build:
 
 ```bash
 cmake -B build -DCMAKE_INSTALL_PREFIX=/usr
@@ -44,22 +44,10 @@ cmake --build build
 sudo cmake --install build
 ```
 
-then restart plasma or run:
+Then restart Plasma or run:
 
 ```bash
 kquitapp6 plasmashell && plasmashell &
 ```
 
-add quickbar from the widget gallery (category: windows and tasks).
-
-## important: replace stock global menu
-
-quickbar registers the same `org.kde.kappmenuview` dbus service as plasma's global menu. do not run both — remove the stock global menu widget from your panel before adding quickbar.
-
-## configuration
-
-right-click the widget → configure quickbar…
-
-| tab | options |
-|-----|---------|
-| general | menu bar, visibility, buttons, text (fonts, margins, colors) |
+Add quickbar from the widget gallery (category: Windows and Tasks).
