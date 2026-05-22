@@ -5,7 +5,7 @@ A Plasma 6+ panel widget that shows the active application's global menu (the sa
 ## Requirements
 
 - Plasma 6.0+ (KF6 / Qt6)
-- `./install.sh` installs missing build dependencies for your distro
+- Build deps: `cmake`, `extra-cmake-modules`, `gcc`, `libplasma`, `plasma-workspace` (LibTaskManager), `qt6-base`, `qt6-declarative`, `kconfig`, `kcoreaddons`, `ki18n`, `kwindowsystem`, `kirigami`
 
 `libdbusmenuqt` is vendored from plasma-workspace (no separate package required).
 
