@@ -13,7 +13,6 @@ A Plasma 6+ panel widget that shows the active application's global menu (the sa
 
 Currently there is an AUR for quickbar that goes under the name `plasma6-applets-quickbar`, for other distributions, you are going to have to run the install script shown below. I plan on having binaries for most distros in the coming days.
 
-Arch:
 ```bash
 yay -S plasma6-applets-quickbar
 ``` 
