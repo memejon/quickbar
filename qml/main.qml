@@ -26,6 +26,7 @@ PlasmoidItem {
     readonly property int appNameMarginBefore: Plasmoid.configuration.appNameMarginBefore
     readonly property int appNameMarginAfter: Plasmoid.configuration.appNameMarginAfter
     readonly property bool stickyMenuBar: Plasmoid.configuration.stickyMenuBar
+    readonly property bool showDesktopMenu: Plasmoid.configuration.showDesktopMenu
     readonly property int maxVisibleItems: Plasmoid.configuration.maxVisibleItems
     readonly property int itemSpacing: Plasmoid.configuration.itemSpacing
     readonly property bool inPanelConfigure: Plasmoid.userConfiguring
@@ -36,7 +37,7 @@ PlasmoidItem {
             return true
         }
         if (!appMenuModel.menuAvailable && hideWhenEmpty) {
-            // macOS-style: keep the bar visible for the app name (including "Plasma" on desktop)
+            // Keep the bar visible for the app name (including "Plasma" on desktop)
             if (showApplicationName && appMenuModel.applicationName.length > 0) {
                 return true
             }
@@ -245,13 +246,12 @@ PlasmoidItem {
 
                         menuIsOpen: Plasmoid.currentIndex !== -1
                         hoverOpensMenu: Plasmoid.configuration.hoverOpensMenu
-                        layoutStyle: Plasmoid.configuration.layoutStyle
+                        hoverCornerRadius: Plasmoid.configuration.hoverCornerRadius
                         fontSize: Plasmoid.configuration.fontSize
                         fontFamily: Plasmoid.configuration.fontFamily
                         fontWeight: Plasmoid.configuration.fontWeight
                         textColor: Plasmoid.configuration.textColor
                         hoverTextColor: Plasmoid.configuration.hoverTextColor
-                        useNativeStyling: Plasmoid.configuration.useNativeStyling
 
                         onActivated: Plasmoid.trigger(this, index)
 
@@ -278,7 +278,34 @@ PlasmoidItem {
         screenGeometry: root.screenGeometry
         allScreens: Plasmoid.configuration.allScreens
         stickyMenuBar: root.stickyMenuBar
+        showDesktopMenu: root.showDesktopMenu
+        enableGenericMenu: Plasmoid.configuration.enableGenericMenu
+        enableMenuSearch: Plasmoid.configuration.enableMenuSearch
         onRequestActivateIndex: Plasmoid.requestActivateIndex(index)
         Component.onCompleted: Plasmoid.model = appMenuModel
+    }
+
+    Connections {
+        target: appMenuModel
+        function onRequestOpenAbout() {
+            Plasmoid.pendingOpenAbout = true
+            const configure = Plasmoid.internalAction("configure")
+            if (configure) {
+                configure.trigger()
+            }
+        }
+    }
+
+    Connections {
+        target: Plasmoid.configuration
+        function onShowDesktopMenuChanged() {
+            appMenuModel.showDesktopMenu = Plasmoid.configuration.showDesktopMenu
+        }
+        function onEnableGenericMenuChanged() {
+            appMenuModel.enableGenericMenu = Plasmoid.configuration.enableGenericMenu
+        }
+        function onEnableMenuSearchChanged() {
+            appMenuModel.enableMenuSearch = Plasmoid.configuration.enableMenuSearch
+        }
     }
 }

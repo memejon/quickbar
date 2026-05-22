@@ -1,5 +1,6 @@
 import QtQuick
-import org.kde.plasma.configuration
+
+import org.kde.plasma.configuration 2.0
 
 ConfigModel {
     ConfigCategory {
@@ -8,13 +9,8 @@ ConfigModel {
         source: "configGeneral.qml"
     }
     ConfigCategory {
-        name: i18n("Appearance")
-        icon: "preferences-desktop-color"
-        source: "configAppearance.qml"
-    }
-    ConfigCategory {
-        name: i18n("Behavior")
-        icon: "preferences-system"
-        source: "configBehavior.qml"
+        name: i18nc("@title:window About this widget", "About")
+        icon: "help-about"
+        source: "configAbout.qml"
     }
 }

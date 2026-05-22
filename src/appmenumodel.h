@@ -21,6 +21,7 @@ class QMenu;
 class QModelIndex;
 class QDBusServiceWatcher;
 class KDBusMenuImporter;
+class MenuShortcutBridge;
 
 class AppMenuModel : public QAbstractListModel
 {
@@ -31,6 +32,9 @@ class AppMenuModel : public QAbstractListModel
     Q_PROPERTY(bool visible READ visible NOTIFY visibleChanged)
     Q_PROPERTY(bool menuForDisplay READ menuForDisplay NOTIFY menuForDisplayChanged)
     Q_PROPERTY(bool stickyMenuBar READ stickyMenuBar WRITE setStickyMenuBar NOTIFY stickyMenuBarChanged)
+    Q_PROPERTY(bool showDesktopMenu READ showDesktopMenu WRITE setShowDesktopMenu NOTIFY showDesktopMenuChanged)
+    Q_PROPERTY(bool enableGenericMenu READ enableGenericMenu WRITE setEnableGenericMenu NOTIFY enableGenericMenuChanged)
+    Q_PROPERTY(bool enableMenuSearch READ enableMenuSearch WRITE setEnableMenuSearch NOTIFY enableMenuSearchChanged)
     Q_PROPERTY(QString applicationName READ applicationName NOTIFY applicationNameChanged)
     Q_PROPERTY(bool allScreens READ allScreens WRITE setallScreens NOTIFY allScreensChanged)
 
@@ -64,6 +68,15 @@ public:
     bool stickyMenuBar() const;
     void setStickyMenuBar(bool sticky);
 
+    bool showDesktopMenu() const;
+    void setShowDesktopMenu(bool show);
+
+    bool enableGenericMenu() const;
+    void setEnableGenericMenu(bool enable);
+
+    bool enableMenuSearch() const;
+    void setEnableMenuSearch(bool enable);
+
     QString applicationName() const;
 
     QRect screenGeometry() const;
@@ -73,6 +86,7 @@ public:
 Q_SIGNALS:
     void requestActivateIndex(int index);
     void bringToFocus(int index);
+    void requestOpenAbout();
 
 private Q_SLOTS:
     void onActiveWindowChanged();
@@ -84,6 +98,9 @@ Q_SIGNALS:
     void menuAvailableChanged();
     void menuForDisplayChanged();
     void stickyMenuBarChanged();
+    void showDesktopMenuChanged();
+    void enableGenericMenuChanged();
+    void enableMenuSearchChanged();
     void applicationNameChanged();
     void modelNeedsUpdate();
     void containmentStatusChanged();
@@ -96,6 +113,10 @@ private:
     bool m_updatePending = false;
     bool m_visible = true;
     bool m_stickyMenuBar = false;
+    bool m_showDesktopMenu = true;
+    bool m_enableGenericMenu = true;
+    bool m_enableMenuSearch = true;
+    bool m_usingGenericMenu = false;
     QString m_applicationName;
 
     Plasma::Types::ItemStatus m_containmentStatus = Plasma::Types::PassiveStatus;
@@ -104,22 +125,34 @@ private:
     static bool isDolphinTask(const QModelIndex &taskIndex, TaskManager::TasksModel *tasksModel);
     static int dolphinDesktopMenuMatchScore(const QModelIndex &taskIndex, TaskManager::TasksModel *tasksModel);
     QModelIndex findDolphinDesktopMenuTask() const;
-    void ensureDolphinAtDesktop();
     void setDesktopProxyMenu(const QString &serviceName, const QString &objectPath);
     void clearDesktopProxyMenu();
     void applyDesktopMenu();
+    void applyGenericMenu();
+    void clearApplicationMenu();
+    bool shouldUseGenericMenu(const QModelIndex &activeTaskIndex) const;
+    qint64 activeTaskPid() const;
+    bool canSignalActiveTask() const;
+    void sendSignalToActiveTask(int signalNumber);
+    void quitActiveTask();
+    void minimizeActiveTask();
+    void maximizeActiveTask();
+    void wireGenericMenuActions(QMenu *menu);
+    void updateGenericMenuActionState();
     TaskManager::TasksModel *m_tasksModel;
-    bool m_dolphinDesktopLaunchPending = false;
     QString m_desktopProxyMenuService;
     QString m_desktopProxyMenuObjectPath;
 
     std::unique_ptr<QMenu> m_searchMenu;
+    std::unique_ptr<QMenu> m_genericMenu;
+    MenuShortcutBridge *m_shortcutBridge = nullptr;
     QPointer<QMenu> m_menu;
     QPointer<QAction> m_searchAction;
     QList<QAction *> m_currentSearchActions;
 
     void removeSearchActionsFromMenu();
     void insertSearchActionsIntoMenu(const QString &filter = QString());
+    bool includeSearchInModel() const;
 
     QDBusServiceWatcher *m_serviceWatcher;
     QString m_serviceName;

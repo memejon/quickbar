@@ -5,26 +5,39 @@ A **Plasma 6+** panel widget that shows the active application’s global menu (
 ## Features
 
 - Full menubar or compact single-button mode
-- Layout styles: native Plasma SVG, flat, or pill buttons
-- Custom font family, size, weight, colors, and item spacing
+- Custom font family, size, weight, colors, button spacing, and hover corner radius
 - Fill remaining panel width, scroll when overflowing, hide when empty
-- Optional application name before the menu (separate font)
-- macOS-style sticky menubar (keep bar when app is unfocused; on desktop shows **Plasma** with Dolphin’s menu for `~/Desktop`)
+- Optional application name before the menu (toggle, margins, and font; shows **Plasma** on the desktop when Finder-style desktop menu is enabled)
+- Finder-style desktop menu: show Dolphin’s menu bar on the desktop when Dolphin is open on your Desktop folder (toggleable; does not launch Dolphin automatically)
+- Visibility presets: always show, active window only, or hide when empty
 - Filter visibility by active window
 - Configurable hover-to-open behavior
 
 ## Requirements
 
 - Plasma 6.0+ (KF6 / Qt6)
-- Build deps: `cmake`, `extra-cmake-modules`, `plasma-framework` / `libplasma`, `libplasma` (LibTaskManager), Qt6 dev packages
+- Build deps: `cmake`, `extra-cmake-modules`, `libplasma`, `plasma-workspace` (LibTaskManager), KF6 dev packages, Qt6 dev packages
 
 On Arch/CachyOS:
 
 ```bash
-sudo pacman -S plasma-framework libplasma kconfig kcoreaddons extra-cmake-modules cmake gcc qt6-base qt6-declarative
+sudo pacman -S libplasma plasma-workspace kconfig kcoreaddons ki18n kwindowsystem kirigami \
+  extra-cmake-modules cmake gcc qt6-base qt6-declarative
 ```
 
 `libdbusmenuqt` is vendored from plasma-workspace (no separate Arch package required).
+
+## Distribution (AUR, apt, dnf)
+
+Pre-built packaging for several package managers lives under [`packaging/`](packaging/):
+
+| Platform | Package name | Install |
+|----------|--------------|---------|
+| Arch / CachyOS (AUR) | `plasma6-applets-quickbar` | `yay -S plasma6-applets-quickbar` |
+| Debian / Ubuntu (Plasma 6) | `quickbar` | build `.deb` from `packaging/debian/` |
+| Fedora / openSUSE | `quickbar` | build from `packaging/rpm/quickbar.spec` |
+
+See [`packaging/README.md`](packaging/README.md) for publishing to the AUR, building `.deb` / `.rpm` packages, and OBS. AUR listing text: [`packaging/arch/AUR.md`](packaging/arch/AUR.md). CI validates packaging on pull requests and release tags.
 
 ## Build & install
 
@@ -52,9 +65,7 @@ Right-click the widget → **Configure QuickBar…**
 
 | Tab | Options |
 |-----|---------|
-| **General** | Compact vs full bar, all screens, fill width, hide when empty, application name and margins |
-| **Appearance** | Style, native SVG, spacing, menu & app name fonts, colors, max visible items |
-| **Behavior** | Sticky menubar (macOS style), active-window filter, hover opens menu |
+| **General** | Menu bar, visibility, buttons, text (fonts, margins, colors) |
 
 ## Project layout
 

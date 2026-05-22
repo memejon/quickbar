@@ -1,0 +1,40 @@
+Source: quickbar
+Section: kde
+Priority: optional
+Maintainer: Kevin Budz <https://github.com/kevinbudz>
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               extra-cmake-modules,
+               g++,
+               qt6-base-dev,
+               qt6-declarative-dev,
+               libplasma-dev,
+               plasma-workspace-dev,
+               libkf6config-dev,
+               libkf6coreaddons-dev,
+               libkf6i18n-dev,
+               libkf6windowsystem-dev,
+               libkirigami-dev,
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/kevinbudz/quickbar
+Vcs-Browser: https://github.com/kevinbudz/quickbar
+Vcs-Git: https://github.com/kevinbudz/quickbar.git
+
+Package: quickbar
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         libplasma6,
+         plasma-workspace,
+         qt6-base,
+         qt6-declarative,
+         libkf6config6,
+         libkf6coreaddons6,
+         libkf6i18n6,
+         libkf6windowsystem6,
+         libkirigami6,
+Description: Plasma 6 global menu panel widget (QuickBar)
+ QuickBar shows the active application's global menu on the Plasma panel,
+ with configurable appearance and behavior. Requires Plasma 6.0+.
+ Remove the stock Global Menu widget before using QuickBar.

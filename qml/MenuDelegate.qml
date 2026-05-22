@@ -5,7 +5,6 @@
 import QtQuick
 import QtQuick.Controls
 
-import org.kde.ksvg as KSvg
 import org.kde.plasma.components as PC3
 import org.kde.kirigami as Kirigami
 
@@ -14,13 +13,12 @@ AbstractButton {
 
     property bool menuIsOpen: false
     property bool hoverOpensMenu: true
-    property string layoutStyle: "native"
+    property int hoverCornerRadius: 4
     property int fontSize: 0
     property string fontFamily: ""
     property int fontWeight: 0
     property string textColor: ""
     property string hoverTextColor: ""
-    property bool useNativeStyling: true
 
     signal activated()
 
@@ -44,51 +42,22 @@ AbstractButton {
         return MenuDelegate.State.Rest
     }
 
+    readonly property bool showHoverBackground: controlRoot.menuState !== MenuDelegate.State.Rest
+
     Kirigami.MnemonicData.controlType: Kirigami.MnemonicData.SecondaryControl
     Kirigami.MnemonicData.label: text
 
-    readonly property int menuVerticalPadding: {
-        if (useNativeStyling && layoutStyle === "native") {
-            return Math.max(rest.margins.top, rest.margins.bottom)
-        }
-        return Kirigami.Units.smallSpacing
-    }
-    readonly property int menuHorizontalPadding: {
-        if (useNativeStyling && layoutStyle === "native") {
-            return Math.max(rest.margins.left, rest.margins.right)
-        }
-        return Kirigami.Units.smallSpacing
-    }
-
-    topPadding: menuVerticalPadding
-    leftPadding: menuHorizontalPadding
-    rightPadding: menuHorizontalPadding
-    bottomPadding: menuVerticalPadding
+    topPadding: Kirigami.Units.smallSpacing
+    leftPadding: Kirigami.Units.smallSpacing
+    rightPadding: Kirigami.Units.smallSpacing
+    bottomPadding: Kirigami.Units.smallSpacing
 
     Accessible.description: i18nc("@info:usagetip", "Open a menu")
 
-    background: Item {
-        visible: useNativeStyling && layoutStyle === "native"
-        KSvg.FrameSvgItem {
-            id: rest
-            anchors.fill: parent
-            imagePath: "widgets/menubaritem"
-            prefix: switch (controlRoot.menuState) {
-                case MenuDelegate.State.Down: return "pressed"
-                case MenuDelegate.State.Hover: return "hover"
-                case MenuDelegate.State.Rest: return "normal"
-            }
-        }
-    }
-
-    Rectangle {
+    background: Rectangle {
         anchors.fill: parent
-        visible: !useNativeStyling || layoutStyle !== "native"
-        radius: layoutStyle === "pill" ? height / 2 : Kirigami.Units.smallSpacing / 2
+        radius: controlRoot.showHoverBackground ? controlRoot.hoverCornerRadius : 0
         color: {
-            if (layoutStyle === "flat") {
-                return "transparent"
-            }
             if (controlRoot.menuState === MenuDelegate.State.Down) {
                 return Kirigami.Theme.highlightColor
             }

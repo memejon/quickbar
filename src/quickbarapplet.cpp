@@ -17,6 +17,7 @@
 #include <QQuickWindow>
 #include <QScreen>
 #include <QTimer>
+#include <QWindow>
 
 int QuickBarApplet::s_refs = 0;
 namespace
@@ -25,7 +26,50 @@ QString viewService()
 {
     return QStringLiteral("org.kde.kappmenuview");
 }
+
+bool isQuickbarGenericMenu(const QMenu *menu)
+{
+    for (const QMenu *m = menu; m; m = qobject_cast<const QMenu *>(m->parent())) {
+        if (m->objectName() == QLatin1String("quickbar-generic-menu")) {
+            return true;
+        }
+    }
+    return false;
 }
+
+void setTransientParentIfPossible(QMenu *menu, QWindow *parentWindow)
+{
+    if (!menu || !parentWindow) {
+        return;
+    }
+    if (QWindow *window = menu->windowHandle()) {
+        window->setTransientParent(parentWindow);
+    }
+}
+
+void cloneMenuStructure(QMenu *sourceMenu, QMenu *destMenu)
+{
+    destMenu->clear();
+
+    for (QAction *sourceAction : sourceMenu->actions()) {
+        if (sourceAction->isSeparator()) {
+            destMenu->addSeparator();
+            continue;
+        }
+
+        if (QMenu *sourceSubMenu = sourceAction->menu()) {
+            QMenu *destSubMenu = destMenu->addMenu(sourceAction->text());
+            cloneMenuStructure(sourceSubMenu, destSubMenu);
+            continue;
+        }
+
+        QAction *clone = destMenu->addAction(sourceAction->text());
+        clone->setEnabled(sourceAction->isEnabled());
+        clone->setShortcut(sourceAction->shortcut());
+        QObject::connect(clone, &QAction::triggered, sourceAction, &QAction::trigger);
+    }
+}
+} // namespace
 
 QuickBarApplet::QuickBarApplet(QObject *parent, const KPluginMetaData &data, const QVariantList &args)
     : Plasma::Applet(parent, data, args)
@@ -139,9 +183,27 @@ QMenu *QuickBarApplet::createMenu(int idx) const
 
 void QuickBarApplet::onMenuAboutToHide()
 {
-    auto menuAction = m_currentMenu->menuAction();
-    menuAction->setMenu(m_sourceMenu);
+    if (m_sourceMenu && !isQuickbarGenericMenu(m_sourceMenu)) {
+        restoreSourceMenu();
+    }
     setCurrentIndex(-1);
+}
+
+void QuickBarApplet::restoreSourceMenu()
+{
+    // Proxy m_currentMenu is not a QAction submenu; use m_sourceMenu->menuAction().
+    if (!m_sourceMenu || !m_currentMenu || m_sourceMenu == m_currentMenu) {
+        return;
+    }
+
+    for (QAction *action : QList<QAction *>(m_currentMenu->actions())) {
+        m_currentMenu->removeAction(action);
+        m_sourceMenu->addAction(action);
+    }
+
+    if (auto *menuAction = m_sourceMenu->menuAction()) {
+        menuAction->setMenu(m_sourceMenu);
+    }
 }
 
 Qt::Edges edgeFromLocation(Plasma::Types::Location location)
@@ -189,25 +251,43 @@ void QuickBarApplet::trigger(QQuickItem *ctx, int idx)
             }
         };
 
-        if (view() == FullView) {
-            if (!m_currentMenu) {
-                m_currentMenu = new QMenu(qobject_cast<QWidget *>(actionMenu->parent()));
-                connect(m_currentMenu, &QMenu::aboutToHide, this, &QuickBarApplet::onMenuAboutToHide, Qt::UniqueConnection);
-            } else if (m_sourceMenu != actionMenu) {
-                auto menuAction = m_currentMenu->menuAction();
-                for (QAction *action : m_currentMenu->actions()) {
-                    m_currentMenu->removeAction(action);
-                    m_sourceMenu->addAction(action);
-                }
-                menuAction->setMenu(m_sourceMenu);
+        const auto &geo = ctx->window()->screen()->availableVirtualGeometry();
+        QPoint pos = ctx->window()->mapToGlobal(ctx->mapToScene(QPointF()).toPoint());
+        const Qt::Edges edges = edgeFromLocation(location());
+        if (location() == Plasma::Types::TopEdge) {
+            pos.setY(pos.y() + ctx->height());
+        }
+
+        if (view() == FullView && isQuickbarGenericMenu(actionMenu)) {
+            if (!m_proxyMenu) {
+                m_proxyMenu = std::make_unique<QMenu>();
+                connect(m_proxyMenu.get(), &QMenu::aboutToHide, this, &QuickBarApplet::onMenuAboutToHide, Qt::UniqueConnection);
+            } else if (m_currentMenu && m_currentMenu->isVisible()) {
+                m_currentMenu->hide();
             }
+
+            cloneMenuStructure(actionMenu, m_proxyMenu.get());
+            m_currentMenu = m_proxyMenu.get();
+            m_sourceMenu = actionMenu;
+        } else if (view() == FullView) {
+            if (!m_proxyMenu) {
+                // Keep the popup independent from source submenus; creating native
+                // windows for hidden generic submenu parents can crash Qt/Wayland.
+                m_proxyMenu = std::make_unique<QMenu>();
+                connect(m_proxyMenu.get(), &QMenu::aboutToHide, this, &QuickBarApplet::onMenuAboutToHide, Qt::UniqueConnection);
+            } else if (m_sourceMenu != actionMenu) {
+                restoreSourceMenu();
+            }
+            m_currentMenu = m_proxyMenu.get();
             m_sourceMenu = actionMenu;
             auto menuAction = m_sourceMenu->menuAction();
-            for (QAction *action : m_sourceMenu->actions()) {
+            for (QAction *action : QList<QAction *>(m_sourceMenu->actions())) {
                 m_sourceMenu->removeAction(action);
                 m_currentMenu->addAction(action);
             }
-            menuAction->setMenu(m_currentMenu);
+            if (menuAction) {
+                menuAction->setMenu(m_currentMenu);
+            }
         } else {
             m_currentMenu = actionMenu;
             m_sourceMenu = actionMenu;
@@ -216,17 +296,7 @@ void QuickBarApplet::trigger(QQuickItem *ctx, int idx)
         QTimer::singleShot(0, ctx, ungrabMouseHack);
         // end workaround
 
-        const auto &geo = ctx->window()->screen()->availableVirtualGeometry();
-
-        QPoint pos = ctx->window()->mapToGlobal(ctx->mapToScene(QPointF()).toPoint());
-
-        const Qt::Edges edges = edgeFromLocation(location());
         m_currentMenu->setProperty("_breeze_menu_seamless_edges", QVariant::fromValue(edges));
-
-        if (location() == Plasma::Types::TopEdge) {
-            pos.setY(pos.y() + ctx->height());
-        }
-
         m_currentMenu->adjustSize();
 
         pos = QPoint(qBound(geo.x(), pos.x(), geo.x() + geo.width() - m_currentMenu->width()),
@@ -235,11 +305,11 @@ void QuickBarApplet::trigger(QQuickItem *ctx, int idx)
         if (view() == FullView) {
             if (m_currentMenu->isVisible()) {
                 m_currentMenu->move(pos);
+                setTransientParentIfPossible(m_currentMenu, ctx->window());
             } else {
                 m_currentMenu->installEventFilter(this);
-                m_currentMenu->winId(); // create window handle
-                m_currentMenu->windowHandle()->setTransientParent(ctx->window());
                 m_currentMenu->popup(pos);
+                setTransientParentIfPossible(m_currentMenu, ctx->window());
             }
         } else if (view() == CompactView) {
             if (m_currentMenu->isEmpty()) {

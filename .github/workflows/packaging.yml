@@ -1,0 +1,118 @@
+# Validate QuickBar builds the same way distro packages do (Arch PKGBUILD / Fedora spec).
+# On version tags, also verify the release tarball URL used by the AUR PKGBUILD.
+
+name: Packaging
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    paths:
+      - '.github/workflows/packaging.yml'
+      - 'CMakeLists.txt'
+      - 'metadata.json'
+      - 'packaging/**'
+      - 'qml/**'
+      - 'src/**'
+      - 'third_party/**'
+      - 'main.xml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  arch:
+    name: Build (Arch Linux)
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed \
+            base-devel cmake extra-cmake-modules gcc \
+            libplasma plasma-workspace \
+            qt6-base qt6-declarative \
+            kconfig kcoreaddons ki18n kwindowsystem kirigami
+
+      - name: CMake build (same as PKGBUILD)
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=None \
+            -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+          test -f build/plasma/applets/org.quickbar.globalmenu.so
+
+      - name: Verify metadata version matches CMakeLists.txt
+        run: |
+          cmake_ver=$(sed -n 's/^project(quickbar VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          meta_ver=$(sed -n 's/.*"Version": "\([^"]*\)".*/\1/p' metadata.json)
+          echo "CMake: ${cmake_ver}, metadata: ${meta_ver}"
+          test "${cmake_ver}" = "${meta_ver}"
+
+      - name: Validate PKGBUILD with makepkg (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          work=/tmp/makepkg-test
+          mkdir -p "$work"
+          cp packaging/arch/PKGBUILD "$work/"
+          cd "$work"
+          sed -i "s/^pkgver=.*/pkgver=${ver}/" PKGBUILD
+          updpkgsums
+          makepkg -f --noconfirm
+          test -f pkg/plasma6-applets-quickbar-*/usr/lib/qt6/plugins/plasma/applets/org.quickbar.globalmenu.so
+
+  fedora:
+    name: Build (Fedora)
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y \
+            cmake extra-cmake-modules gcc-c++ \
+            qt6-qtbase-devel qt6-qtdeclarative-devel \
+            libplasma-devel plasma-workspace-devel \
+            kf6-kconfig-devel kf6-kcoreaddons-devel kf6-ki18n-devel \
+            kf6-kwindowsystem-devel kf6-kirigami-devel
+
+      - name: CMake build (same as RPM spec)
+        run: |
+          cmake -B build -S . \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+          test -f build/plasma/applets/org.quickbar.globalmenu.so
+
+      - name: rpmbuild (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          mkdir -p ~/rpmbuild/SOURCES
+          tar -czf ~/rpmbuild/SOURCES/quickbar-${ver}.tar.gz \
+            --transform "s,^,quickbar-${ver}/," \
+            --exclude=build --exclude=.git .
+          rpmbuild -ba packaging/rpm/quickbar.spec \
+            --define "version ${ver}"
+
+  release-tarball:
+    name: Verify release tarball URL
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check GitHub archive exists
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          url="https://github.com/${{ github.repository }}/archive/refs/tags/v${ver}.tar.gz"
+          echo "Checking ${url}"
+          curl -fsSIL -o /dev/null -w '%{http_code}\n' "${url}" | grep -q '^200$'

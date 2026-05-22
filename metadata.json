@@ -1,21 +1,22 @@
 {
+    "KPackageStructure": "Plasma/Applet",
     "KPlugin": {
         "Authors": [
             {
-                "Name": "Kevin",
-                "Email": ""
+                "Name": "Kevin Budz"
             }
         ],
-        "BugReportUrl": "https://github.com/kevin/quickbar/issues",
+        "BugReportUrl": "https://github.com/kevinbudz/quickbar/issues",
         "Category": "Windows and Tasks",
-        "Description": "Highly configurable global application menu for Plasma",
-        "FormFactors": ["desktop"],
+        "Description": "A replacement for KDE 6+'s Global Menu widget. ",
+        "EnabledByDefault": true,
         "Icon": "show-menu",
-        "License": "GPL-2.0+",
-        "Name": "QuickBar",
+        "Id": "io.github.kevinbudz.quickbar",
+        "License": "GPL-2.0-or-later",
+        "Name": "quickbar",
         "Version": "0.1.0",
-        "Website": "https://github.com/kevin/quickbar"
+        "Website": "https://github.com/kevinbudz/quickbar/"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
-    "KPackageStructure": "Plasma/Applet"
+    "X-Plasma-MainScript": "ui/main.qml"
 }

@@ -20,6 +20,7 @@ include(FeatureSummary)
 # Core must be found first so Qt6CoreConfigExtras sets QT_DEFAULT_MAJOR_VERSION
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Widgets Quick DBus)
+find_package(X11 QUIET COMPONENTS Xtst)
 # Plasma::Plasma links KF6::ConfigCore, KF6::CoreAddons, etc. — find them before Plasma
 find_package(KF6 REQUIRED COMPONENTS Config CoreAddons I18n WindowSystem)
 find_package(Plasma REQUIRED)
@@ -37,13 +38,16 @@ plasma_add_applet(org.quickbar.globalmenu
         qml/AppNameLabel.qml
         qml/config.qml
         qml/configGeneral.qml
-        qml/configAppearance.qml
-        qml/configBehavior.qml
+        qml/configAbout.qml
     CPP_SOURCES
         src/quickbarapplet.cpp
         src/quickbarapplet.h
         src/appmenumodel.cpp
         src/appmenumodel.h
+        src/genericmenu.cpp
+        src/genericmenu.h
+        src/menushortcutsender.cpp
+        src/menushortcutsender.h
     RESOURCES
         main.xml
     QML_ARGS
@@ -52,6 +56,8 @@ plasma_add_applet(org.quickbar.globalmenu
             org.kde.plasma.core
             org.kde.kirigami
             org.kde.plasma.components
+            org.kde.kcmutils
+            org.kde.plasma.configuration
 )
 
 # KDECMakeSettings unsets CMAKE_LIBRARY_OUTPUT_DIRECTORY on Linux, which makes
@@ -76,5 +82,9 @@ target_link_libraries(org.quickbar.globalmenu PRIVATE
     PW::LibTaskManager
     dbusmenuqt
 )
+
+if(TARGET X11::Xtst)
+    target_link_libraries(org.quickbar.globalmenu PRIVATE X11::X11 X11::Xtst)
+endif()
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
