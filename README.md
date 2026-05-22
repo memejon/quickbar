@@ -41,6 +41,14 @@ See [`packaging/README.md`](packaging/README.md) for publishing to the AUR, buil
 
 ## Build & install
 
+From a git checkout, `./install.sh` detects your distro (Arch, Debian/Ubuntu, Fedora, openSUSE) and installs any missing build dependencies before compiling:
+
+```bash
+./install.sh
+```
+
+Manual build:
+
 ```bash
 cmake -B build -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build build
