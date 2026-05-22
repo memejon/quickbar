@@ -1,6 +1,6 @@
 # quickbar
 
-A Plasma 6+ panel widget that shows the active application's global menu (the same DBus app-menu protocol as KDE's built-in Global Menu), with far more appearance and behavior options.
+A Plasma 6+ panel widget that shows the active application's global menu (the same DBus app-menu protocol as KDE's built-in Global Menu), with more appearance and behavior options.
 
 ## Requirements
 
