@@ -11,15 +11,11 @@ A Plasma 6+ panel widget that shows the active application's global menu (the sa
 
 ## Distribution (AUR, apt, dnf)
 
-Pre-built packaging for several package managers lives under [`packaging/`](packaging/):
+Currently there is an AUR for quickbar that goes under `plasma6-applets-quickbar`, for other distributions, you are going to have to run the install script shown below.
 
-| Platform | Package name | Install |
-|----------|--------------|---------|
-| Arch / CachyOS (AUR) | `plasma6-applets-quickbar` | `yay -S plasma6-applets-quickbar` |
-| Debian / Ubuntu (Plasma 6) | `quickbar` | Build `.deb` from `packaging/debian/` |
-| Fedora / openSUSE | `quickbar` | Build from `packaging/rpm/quickbar.spec` |
+Arch:
+`yay -S plasma6-applets-quickbar` 
 
-See [`packaging/README.md`](packaging/README.md) for publishing to the AUR, building `.deb` / `.rpm` packages, and OBS. AUR listing text: [`packaging/arch/AUR.md`](packaging/arch/AUR.md). CI validates packaging on pull requests and release tags.
 
 ## Build & install
 
