@@ -122,12 +122,6 @@ private:
     Plasma::Types::ItemStatus m_containmentStatus = Plasma::Types::PassiveStatus;
 
     void setApplicationName(const QString &name);
-    static bool isDolphinTask(const QModelIndex &taskIndex, TaskManager::TasksModel *tasksModel);
-    static int dolphinDesktopMenuMatchScore(const QModelIndex &taskIndex, TaskManager::TasksModel *tasksModel);
-    QModelIndex findDolphinDesktopMenuTask() const;
-    void setDesktopProxyMenu(const QString &serviceName, const QString &objectPath);
-    void clearDesktopProxyMenu();
-    void applyDesktopMenu();
     void applyGenericMenu();
     void clearApplicationMenu();
     bool shouldUseGenericMenu(const QModelIndex &activeTaskIndex) const;
@@ -139,9 +133,8 @@ private:
     void maximizeActiveTask();
     void wireGenericMenuActions(QMenu *menu);
     void updateGenericMenuActionState();
+    bool genericMenuHasDuplicateActions(const QMenu *menu) const;
     TaskManager::TasksModel *m_tasksModel;
-    QString m_desktopProxyMenuService;
-    QString m_desktopProxyMenuObjectPath;
 
     std::unique_ptr<QMenu> m_searchMenu;
     std::unique_ptr<QMenu> m_genericMenu;

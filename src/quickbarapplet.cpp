@@ -29,16 +29,6 @@ QString viewService()
     return QStringLiteral("org.kde.kappmenuview");
 }
 
-bool isQuickbarGenericMenu(const QMenu *menu)
-{
-    for (const QMenu *m = menu; m; m = qobject_cast<const QMenu *>(m->parent())) {
-        if (m->objectName() == QLatin1String("quickbar-generic-menu")) {
-            return true;
-        }
-    }
-    return false;
-}
-
 void setTransientParentIfPossible(QMenu *menu, QWindow *parentWindow)
 {
     if (!menu || !parentWindow) {
@@ -250,27 +240,11 @@ QMenu *QuickBarApplet::createMenu(int idx) const
 
 void QuickBarApplet::onMenuAboutToHide()
 {
-    if (m_sourceMenu && !isQuickbarGenericMenu(m_sourceMenu)) {
-        restoreSourceMenu();
-    }
-    setCurrentIndex(-1);
-}
-
-void QuickBarApplet::restoreSourceMenu()
-{
-    // Proxy m_currentMenu is not a QAction submenu; use m_sourceMenu->menuAction().
-    if (!m_sourceMenu || !m_currentMenu || m_sourceMenu == m_currentMenu) {
+    if (m_pendingMenuSwitch) {
         return;
     }
 
-    for (QAction *action : QList<QAction *>(m_currentMenu->actions())) {
-        m_currentMenu->removeAction(action);
-        m_sourceMenu->addAction(action);
-    }
-
-    if (auto *menuAction = m_sourceMenu->menuAction()) {
-        menuAction->setMenu(m_sourceMenu);
-    }
+    setCurrentIndex(-1);
 }
 
 Qt::Edges edgeFromLocation(Plasma::Types::Location location)
@@ -298,8 +272,16 @@ void QuickBarApplet::trigger(QQuickItem *ctx, int idx)
         return;
     }
 
+    const bool switchingMenu = m_currentIndex >= 0;
+
     if (!ctx || !ctx->window() || !ctx->window()->screen()) {
+        if (switchingMenu) {
+            m_pendingMenuSwitch = false;
+        }
         return;
+    }
+    if (switchingMenu) {
+        m_pendingMenuSwitch = true;
     }
 
     QMenu *actionMenu = createMenu(idx);
@@ -325,50 +307,18 @@ void QuickBarApplet::trigger(QQuickItem *ctx, int idx)
             pos.setY(pos.y() + ctx->height());
         }
 
-        if (view() == FullView && isQuickbarGenericMenu(actionMenu)) {
-            if (!m_proxyMenu) {
-                m_proxyMenu = std::make_unique<QMenu>();
-                connect(m_proxyMenu.get(), &QMenu::aboutToHide, this, &QuickBarApplet::onMenuAboutToHide, Qt::UniqueConnection);
-            } else if (m_currentMenu && m_currentMenu->isVisible()) {
-                m_currentMenu->hide();
-            }
-
-            cloneMenuStructure(actionMenu, m_proxyMenu.get());
-            m_currentMenu = m_proxyMenu.get();
-            m_sourceMenu = actionMenu;
-        } else if (view() == FullView) {
-            if (!m_proxyMenu) {
-                // Keep the popup independent from source submenus; creating native
-                // windows for hidden generic submenu parents can crash Qt/Wayland.
-                m_proxyMenu = std::make_unique<QMenu>();
-                connect(m_proxyMenu.get(), &QMenu::aboutToHide, this, &QuickBarApplet::onMenuAboutToHide, Qt::UniqueConnection);
-            } else if (m_sourceMenu != actionMenu) {
-                restoreSourceMenu();
-            }
-            m_currentMenu = m_proxyMenu.get();
-            m_sourceMenu = actionMenu;
-            auto menuAction = m_sourceMenu->menuAction();
-            for (QAction *action : QList<QAction *>(m_sourceMenu->actions())) {
-                m_sourceMenu->removeAction(action);
-                m_currentMenu->addAction(action);
-            }
-            if (menuAction) {
-                menuAction->setMenu(m_currentMenu);
-            }
-        } else {
-            // CompactView: clone into a proxy menu; popping the DBus-imported menu
-            // directly can crash Qt/Wayland (same issue as FullView above).
-            if (!m_proxyMenu) {
-                m_proxyMenu = std::make_unique<QMenu>();
-                connect(m_proxyMenu.get(), &QMenu::aboutToHide, this, &QuickBarApplet::onMenuAboutToHide, Qt::UniqueConnection);
-            } else if (m_currentMenu && m_currentMenu->isVisible()) {
-                m_currentMenu->hide();
-            }
-
-            cloneMenuStructure(actionMenu, m_proxyMenu.get());
-            m_currentMenu = m_proxyMenu.get();
-            m_sourceMenu = actionMenu;
+        // Always clone into a proxy menu. Moving actions out of DBus-imported menus
+        // (e.g. Firefox) corrupts the app's menu and can crash the application.
+        if (!m_proxyMenu) {
+            m_proxyMenu = std::make_unique<QMenu>();
+            connect(m_proxyMenu.get(), &QMenu::aboutToHide, this, &QuickBarApplet::onMenuAboutToHide, Qt::UniqueConnection);
+        } else if (m_currentMenu && m_currentMenu->isVisible() && !switchingMenu) {
+            m_currentMenu->hide();
         }
+
+        cloneMenuStructure(actionMenu, m_proxyMenu.get());
+        m_currentMenu = m_proxyMenu.get();
+        m_sourceMenu = actionMenu;
 
         QTimer::singleShot(0, ctx, ungrabMouseHack);
         // end workaround
@@ -380,17 +330,21 @@ void QuickBarApplet::trigger(QQuickItem *ctx, int idx)
                      qBound(geo.y(), pos.y(), geo.y() + geo.height() - m_currentMenu->height()));
 
         if (view() == FullView) {
-            if (m_currentMenu->isVisible()) {
-                m_currentMenu->move(pos);
-                setTransientParentIfPossible(m_currentMenu, ctx->window());
-            } else {
-                m_currentMenu->installEventFilter(this);
+            m_currentMenu->installEventFilter(this);
+            // Reposition with popup when switching: move() leaves the menu under the
+            // pointer while the cursor is still on the menubar, so Qt closes it.
+            if (!m_currentMenu->isVisible() || switchingMenu) {
                 m_currentMenu->popup(pos);
-                setTransientParentIfPossible(m_currentMenu, ctx->window());
+            } else {
+                m_currentMenu->move(pos);
             }
+            setTransientParentIfPossible(m_currentMenu, ctx->window());
         } else if (view() == CompactView) {
             if (m_currentMenu->isEmpty()) {
                 // don't try to popup an empty menu in case the app gives us one
+                if (switchingMenu) {
+                    m_pendingMenuSwitch = false;
+                }
                 return;
             }
             m_currentMenu->popup(pos);
@@ -399,12 +353,23 @@ void QuickBarApplet::trigger(QQuickItem *ctx, int idx)
 
         setCurrentIndex(idx);
 
+        if (switchingMenu) {
+            QTimer::singleShot(0, this, [this]() {
+                m_pendingMenuSwitch = false;
+            });
+        }
+
         // FIXME TODO connect only once
     } else if (m_model) { // is it just an action without a menu?
+        if (switchingMenu) {
+            m_pendingMenuSwitch = false;
+        }
         if (auto *action = m_model->index(idx, 0).data(AppMenuModel::ActionRole).value<QAction *>()) {
             Q_ASSERT(!action->menu());
             action->trigger();
         }
+    } else if (switchingMenu) {
+        m_pendingMenuSwitch = false;
     }
 }
 

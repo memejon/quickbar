@@ -93,7 +93,7 @@
       <default>true</default>
     </entry>
     <entry name="showDesktopMenu" type="Bool">
-      <label>Show Dolphin’s menu on the desktop (Finder-style)</label>
+      <label>Show the generic menu bar on the desktop</label>
       <default>true</default>
     </entry>
     <entry name="hoverOpensMenu" type="Bool">

@@ -10,6 +10,32 @@ import org.kde.kirigami as Kirigami
 KCMUtils.SimpleKCM {
     id: generalPage
 
+    // Defaults from main.xml (used by Plasma for reset / change highlighting)
+    readonly property bool cfg_compactViewDefault: false
+    readonly property bool cfg_allScreensDefault: true
+    readonly property bool cfg_fillWidthDefault: false
+    readonly property bool cfg_hideWhenEmptyDefault: false
+    readonly property bool cfg_showApplicationNameDefault: false
+    readonly property int cfg_appNameMarginBeforeDefault: 0
+    readonly property int cfg_appNameMarginAfterDefault: 4
+    readonly property int cfg_itemSpacingDefault: 8
+    readonly property int cfg_hoverCornerRadiusDefault: 4
+    readonly property int cfg_fontSizeDefault: 0
+    readonly property string cfg_fontFamilyDefault: ""
+    readonly property int cfg_fontWeightDefault: 0
+    readonly property int cfg_appNameFontSizeDefault: 0
+    readonly property string cfg_appNameFontFamilyDefault: ""
+    readonly property int cfg_appNameFontWeightDefault: 700
+    readonly property string cfg_textColorDefault: ""
+    readonly property string cfg_hoverTextColorDefault: ""
+    readonly property int cfg_maxVisibleItemsDefault: 0
+    readonly property bool cfg_filterByActiveDefault: false
+    readonly property bool cfg_stickyMenuBarDefault: true
+    readonly property bool cfg_showDesktopMenuDefault: true
+    readonly property bool cfg_hoverOpensMenuDefault: true
+    readonly property bool cfg_enableMenuSearchDefault: true
+    readonly property bool cfg_enableGenericMenuDefault: true
+
     property alias cfg_compactView: compactViewRadio.checked
     property alias cfg_allScreens: allScreensCheck.checked
     property alias cfg_fillWidth: fillWidthCheck.checked
@@ -174,12 +200,6 @@ KCMUtils.SimpleKCM {
 
     Component.onCompleted: syncVisibilityPresetCombo()
 
-    QQC2.CheckBox {
-        id: enableMenuSearchCheck
-        visible: false
-        checked: true
-    }
-
     Kirigami.FormLayout {
         Kirigami.InlineMessage {
             Layout.fillWidth: true
@@ -315,6 +335,12 @@ KCMUtils.SimpleKCM {
                         id: hideWhenEmptyCheck
                         visible: false
                         onCheckedChanged: if (!_syncingPreset) generalPage.syncVisibilityPresetCombo()
+                    }
+
+                    QQC2.CheckBox {
+                        id: enableMenuSearchCheck
+                        visible: false
+                        checked: true
                     }
                 }
             }
@@ -541,39 +567,5 @@ KCMUtils.SimpleKCM {
         parentWindow: generalPage.Window.window
 
         onAccepted: generalPage.applyFontFromDialog(appNameFontSettings, font)
-    }
-
-    function findAppletConfiguration() {
-        let parent = generalPage.parent
-        while (parent) {
-            if (typeof parent.open === "function" && parent.configDialog !== undefined) {
-                return parent
-            }
-            parent = parent.parent
-        }
-        return null
-    }
-
-    function openAboutSettingsPage() {
-        const appletConfig = findAppletConfiguration()
-        if (!appletConfig) {
-            return
-        }
-        appletConfig.open({
-            name: i18nc("@title:window About this widget", "About"),
-            source: Qt.resolvedUrl("configAbout.qml"),
-        })
-        Plasmoid.pendingOpenAbout = false
-    }
-
-    Connections {
-        target: Plasmoid
-        function onUserConfiguringChanged(configuring) {
-            if (configuring && Plasmoid.pendingOpenAbout) {
-                Qt.callLater(openAboutSettingsPage)
-            } else if (!configuring) {
-                Plasmoid.pendingOpenAbout = false
-            }
-        }
     }
 }

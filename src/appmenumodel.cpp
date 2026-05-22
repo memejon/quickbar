@@ -11,9 +11,8 @@
 #include "menushortcutsender.h"
 
 #include <QDBusConnection>
-#include <QDBusConnectionInterface>
-#include <QCoreApplication>
 #include <QDBusServiceWatcher>
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QFile>
 #include <QGuiApplication>
@@ -225,10 +224,6 @@ void AppMenuModel::setShowDesktopMenu(bool show)
 
     m_showDesktopMenu = show;
     Q_EMIT showDesktopMenuChanged();
-
-    if (!show) {
-        clearDesktopProxyMenu();
-    }
     onActiveWindowChanged();
 }
 
@@ -349,127 +344,6 @@ void AppMenuModel::update()
     m_updatePending = false;
 }
 
-bool AppMenuModel::isDolphinTask(const QModelIndex &taskIndex, TaskManager::TasksModel *tasksModel)
-{
-    if (!taskIndex.isValid() || !tasksModel) {
-        return false;
-    }
-
-    const QString appId = tasksModel->data(taskIndex, TaskManager::AbstractTasksModel::AppId).toString();
-    if (appId.contains(QLatin1String("dolphin"), Qt::CaseInsensitive)) {
-        return true;
-    }
-
-    const QUrl launcherUrl = tasksModel->data(taskIndex, TaskManager::AbstractTasksModel::LauncherUrl).toUrl();
-    return launcherUrl.isValid() && launcherUrl.path().contains(QLatin1String("org.kde.dolphin"));
-}
-
-int AppMenuModel::dolphinDesktopMenuMatchScore(const QModelIndex &taskIndex, TaskManager::TasksModel *tasksModel)
-{
-    if (!isDolphinTask(taskIndex, tasksModel)) {
-        return -1;
-    }
-
-    const QString serviceName = tasksModel->data(taskIndex, TaskManager::AbstractTasksModel::ApplicationMenuServiceName).toString();
-    const QString objectPath = tasksModel->data(taskIndex, TaskManager::AbstractTasksModel::ApplicationMenuObjectPath).toString();
-    if (serviceName.isEmpty() || objectPath.isEmpty()) {
-        return -1;
-    }
-
-    const QString windowTitle = tasksModel->data(taskIndex, Qt::DisplayRole).toString();
-    const QString desktopPath = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
-    if (desktopPath.isEmpty()) {
-        return 1;
-    }
-
-    const QFileInfo desktopInfo(desktopPath);
-    const QString desktopFolderName = desktopInfo.fileName();
-    if (!desktopFolderName.isEmpty()) {
-        if (windowTitle.compare(desktopFolderName, Qt::CaseInsensitive) == 0) {
-            return 100;
-        }
-        if (windowTitle.contains(desktopFolderName, Qt::CaseInsensitive)) {
-            return 50;
-        }
-    }
-
-    if (windowTitle.contains(desktopInfo.absoluteFilePath(), Qt::CaseInsensitive)) {
-        return 50;
-    }
-
-    // Common fallback when the folder is literally named "Desktop"
-    if (windowTitle.contains(QLatin1String("Desktop"), Qt::CaseInsensitive)) {
-        return 25;
-    }
-
-    return 1;
-}
-
-QModelIndex AppMenuModel::findDolphinDesktopMenuTask() const
-{
-    QModelIndex bestMatch;
-    int bestScore = -1;
-
-    const auto consider = [&](const QModelIndex &taskIndex) {
-        const int score = dolphinDesktopMenuMatchScore(taskIndex, m_tasksModel);
-        if (score > bestScore) {
-            bestScore = score;
-            bestMatch = taskIndex;
-        }
-    };
-
-    for (int i = 0; i < m_tasksModel->rowCount(); ++i) {
-        const QModelIndex idx = m_tasksModel->index(i, 0);
-        consider(idx);
-
-        for (int j = 0; j < m_tasksModel->rowCount(idx); ++j) {
-            consider(m_tasksModel->index(j, 0, idx));
-        }
-    }
-
-    return bestMatch;
-}
-
-void AppMenuModel::setDesktopProxyMenu(const QString &serviceName, const QString &objectPath)
-{
-    m_desktopProxyMenuService = serviceName;
-    m_desktopProxyMenuObjectPath = objectPath;
-}
-
-void AppMenuModel::clearDesktopProxyMenu()
-{
-    m_desktopProxyMenuService.clear();
-    m_desktopProxyMenuObjectPath.clear();
-}
-
-void AppMenuModel::applyDesktopMenu()
-{
-    const auto useProxyMenu = [this](const QString &serviceName, const QString &objectPath) {
-        if (serviceName.isEmpty() || objectPath.isEmpty()) {
-            return false;
-        }
-        setDesktopProxyMenu(serviceName, objectPath);
-        updateApplicationMenu(serviceName, objectPath);
-        return true;
-    };
-
-    // Reuse the last known Desktop Dolphin menu; TasksModel often clears menu paths when unfocused.
-    if (useProxyMenu(m_desktopProxyMenuService, m_desktopProxyMenuObjectPath)) {
-        return;
-    }
-
-    const QModelIndex dolphinTask = findDolphinDesktopMenuTask();
-    if (dolphinTask.isValid()) {
-        const QString objectPath = m_tasksModel->data(dolphinTask, TaskManager::AbstractTasksModel::ApplicationMenuObjectPath).toString();
-        const QString serviceName = m_tasksModel->data(dolphinTask, TaskManager::AbstractTasksModel::ApplicationMenuServiceName).toString();
-        if (useProxyMenu(serviceName, objectPath)) {
-            return;
-        }
-    }
-
-    clearApplicationMenu();
-}
-
 void AppMenuModel::onActiveWindowChanged()
 {
     // Do not change active window when panel gets focus
@@ -502,10 +376,8 @@ void AppMenuModel::onActiveWindowChanged()
             applyGenericMenu();
             return;
         }
-    }
-
-    if (m_showDesktopMenu) {
-        applyDesktopMenu();
+    } else if (m_showDesktopMenu && shouldUseGenericMenu(activeTaskIndex)) {
+        applyGenericMenu();
         return;
     }
 
@@ -514,7 +386,13 @@ void AppMenuModel::onActiveWindowChanged()
 
 bool AppMenuModel::shouldUseGenericMenu(const QModelIndex &activeTaskIndex) const
 {
-    return m_enableGenericMenu && activeTaskIndex.isValid();
+    if (!m_enableGenericMenu) {
+        return false;
+    }
+    if (!activeTaskIndex.isValid()) {
+        return m_showDesktopMenu;
+    }
+    return true;
 }
 
 void AppMenuModel::clearApplicationMenu()
@@ -665,8 +543,30 @@ void AppMenuModel::updateGenericMenuActionState()
     }
 }
 
+bool AppMenuModel::genericMenuHasDuplicateActions(const QMenu *menu) const
+{
+    if (!menu) {
+        return false;
+    }
+
+    int aboutCount = 0;
+    const auto actions = menu->findChildren<QAction *>();
+    for (const QAction *action : actions) {
+        if (action->property(genericActionProperty).toString() == QLatin1String(openAboutAction)) {
+            if (++aboutCount > 1) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void AppMenuModel::applyGenericMenu()
 {
+    if (m_genericMenu && genericMenuHasDuplicateActions(m_genericMenu.get())) {
+        m_genericMenu.reset();
+    }
+
     if (!m_genericMenu) {
         m_genericMenu.reset(GenericMenu::create(this));
 
@@ -782,11 +682,6 @@ void AppMenuModel::updateApplicationMenu(const QString &serviceName, const QStri
     }
 
     if (serviceName.isEmpty() || menuObjectPath.isEmpty()) {
-        // Keep the cached desktop menu when TasksModel momentarily clears paths on the desktop.
-        if (m_menuAvailable && m_showDesktopMenu && !m_tasksModel->activeTask().isValid()) {
-            return;
-        }
-
         if (shouldUseGenericMenu(m_tasksModel->activeTask())) {
             applyGenericMenu();
             return;

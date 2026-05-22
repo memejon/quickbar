@@ -68,9 +68,9 @@ private:
     QMenu *createMenu(int idx) const;
     void setCurrentIndex(int currentIndex);
     void onMenuAboutToHide();
-    void restoreSourceMenu();
 
     int m_currentIndex = -1;
+    bool m_pendingMenuSwitch = false;
     int m_viewType = FullView;
     QPointer<QMenu> m_currentMenu;
     QPointer<QMenu> m_sourceMenu;

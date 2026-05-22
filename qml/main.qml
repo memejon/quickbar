@@ -345,6 +345,29 @@ PlasmoidItem {
         Component.onCompleted: Plasmoid.model = appMenuModel
     }
 
+    function findAppletConfiguration() {
+        let parent = root.parent
+        while (parent) {
+            if (typeof parent.open === "function" && parent.configDialog !== undefined) {
+                return parent
+            }
+            parent = parent.parent
+        }
+        return null
+    }
+
+    function openAboutSettingsPage() {
+        const appletConfig = findAppletConfiguration()
+        if (!appletConfig) {
+            return
+        }
+        appletConfig.open({
+            name: i18nc("@title:window About this widget", "About"),
+            source: Qt.resolvedUrl("configAbout.qml"),
+        })
+        Plasmoid.pendingOpenAbout = false
+    }
+
     Connections {
         target: appMenuModel
         function onRequestOpenAbout() {
@@ -352,6 +375,17 @@ PlasmoidItem {
             const configure = Plasmoid.internalAction("configure")
             if (configure) {
                 configure.trigger()
+            }
+        }
+    }
+
+    Connections {
+        target: Plasmoid
+        function onUserConfiguringChanged(configuring) {
+            if (configuring && Plasmoid.pendingOpenAbout) {
+                Qt.callLater(openAboutSettingsPage)
+            } else if (!configuring) {
+                Plasmoid.pendingOpenAbout = false
             }
         }
     }
