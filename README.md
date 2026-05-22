@@ -5,16 +5,9 @@ A Plasma 6+ panel widget that shows the active application's global menu (the sa
 ## Requirements
 
 - Plasma 6.0+ (KF6 / Qt6)
-- Build deps: `cmake`, `extra-cmake-modules`, `libplasma`, `plasma-workspace` (LibTaskManager), KF6 dev packages, Qt6 dev packages
+- `./install.sh` installs missing build dependencies for your distro
 
-On Arch/CachyOS:
-
-```bash
-sudo pacman -S libplasma plasma-workspace kconfig kcoreaddons ki18n kwindowsystem kirigami \
-  extra-cmake-modules cmake gcc qt6-base qt6-declarative
-```
-
-`libdbusmenuqt` is vendored from plasma-workspace (no separate Arch package required).
+`libdbusmenuqt` is vendored from plasma-workspace (no separate package required).
 
 ## Distribution (AUR, apt, dnf)
 
