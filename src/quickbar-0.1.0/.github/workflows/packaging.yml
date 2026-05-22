@@ -36,10 +36,10 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm --needed \
-            base-devel pacman-contrib cmake extra-cmake-modules gcc \
+            base-devel cmake extra-cmake-modules gcc \
             libplasma plasma-workspace \
             qt6-base qt6-declarative \
-            kconfig kcoreaddons ki18n kitemmodels kwindowsystem kirigami
+            kconfig kcoreaddons ki18n kwindowsystem kirigami
 
       - name: CMake build (same as PKGBUILD)
         run: |
@@ -84,8 +84,7 @@ jobs:
             qt6-qtbase-devel qt6-qtdeclarative-devel \
             libplasma-devel plasma-workspace-devel \
             kf6-kconfig-devel kf6-kcoreaddons-devel kf6-ki18n-devel \
-            kf6-kitemmodels-devel kf6-kwindowsystem-devel kf6-kirigami-devel \
-            libX11-devel libXtst-devel
+            kf6-kwindowsystem-devel kf6-kirigami-devel
 
       - name: CMake build (same as RPM spec)
         run: |

@@ -56,82 +56,22 @@ PlasmoidItem {
     Plasmoid.constraintHints: Plasmoid.CanFillArea
     preferredRepresentation: compact ? compactRepresentation : fullRepresentation
 
-    compactRepresentation: Item {
-        id: compactRoot
-        readonly property bool showAppName: root.showApplicationName
-            && appMenuModel.applicationName.length > 0
-            && (root.barVisible || root.inPanelConfigure)
+    compactRepresentation: PlasmaComponents3.ToolButton {
+        readonly property int fakeIndex: 0
+        Layout.fillWidth: false
+        Layout.fillHeight: false
+        Layout.minimumWidth: implicitWidth
+        Layout.maximumWidth: implicitWidth
+        enabled: shouldShowMenu || root.inPanelConfigure
+        checkable: shouldShowMenu && Plasmoid.currentIndex === fakeIndex
+        checked: checkable
+        icon.name: "application-menu"
+        display: PlasmaComponents3.AbstractButton.IconOnly
+        text: Plasmoid.title
+        Accessible.description: root.toolTipSubText
+        onClicked: Plasmoid.trigger(this, 0)
 
-        readonly property int contentWidth: {
-            let w = compactMenuButton.implicitWidth
-            if (showAppName) {
-                w += compactAppName.implicitWidth
-                    + (root.vertical ? root.appNameMarginBefore + root.appNameMarginAfter
-                        : root.appNameMarginBefore + root.appNameMarginAfter + Kirigami.Units.smallSpacing)
-            }
-            return w
-        }
-        readonly property int contentHeight: {
-            let h = compactMenuButton.implicitHeight
-            if (showAppName) {
-                h = Math.max(h, compactAppName.implicitHeight)
-                    + (root.vertical ? root.appNameMarginBefore + root.appNameMarginAfter + Kirigami.Units.smallSpacing : 0)
-            }
-            return h
-        }
-
-        implicitWidth: contentWidth
-        implicitHeight: contentHeight
-        Layout.minimumWidth: contentWidth
-        Layout.minimumHeight: contentHeight
-        Layout.preferredWidth: contentWidth
-        Layout.preferredHeight: contentHeight
-
-        GridLayout {
-            id: compactGrid
-            anchors.fill: parent
-            LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
-            flow: root.vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
-            columnSpacing: root.vertical ? 0 : Kirigami.Units.smallSpacing
-            rowSpacing: root.vertical ? Kirigami.Units.smallSpacing : 0
-
-            AppNameLabel {
-                id: compactAppName
-                visible: compactRoot.showAppName
-                text: appMenuModel.applicationName
-                fontSize: Plasmoid.configuration.appNameFontSize
-                fontFamily: Plasmoid.configuration.appNameFontFamily
-                fontWeight: Plasmoid.configuration.appNameFontWeight
-                Layout.alignment: Qt.AlignVCenter
-                Layout.leftMargin: root.vertical ? 0 : root.appNameMarginBefore
-                Layout.rightMargin: root.vertical ? 0 : root.appNameMarginAfter
-                Layout.topMargin: root.vertical ? root.appNameMarginBefore : 0
-                Layout.bottomMargin: root.vertical ? root.appNameMarginAfter : 0
-            }
-
-            PlasmaComponents3.ToolButton {
-                id: compactMenuButton
-                readonly property int fakeIndex: 0
-                Layout.alignment: Qt.AlignVCenter
-                Layout.fillWidth: false
-                Layout.fillHeight: false
-                Layout.minimumWidth: implicitWidth
-                Layout.maximumWidth: implicitWidth
-                enabled: shouldShowMenu || root.inPanelConfigure
-                checkable: shouldShowMenu && Plasmoid.currentIndex === fakeIndex
-                checked: checkable
-                icon.name: "application-menu"
-                display: PlasmaComponents3.AbstractButton.IconOnly
-                text: Plasmoid.title
-                Accessible.description: root.toolTipSubText
-                Accessible.name: compactRoot.showAppName
-                    ? appMenuModel.applicationName + " — " + Plasmoid.title
-                    : Plasmoid.title
-                onClicked: Plasmoid.trigger(compactMenuButton, 0)
-
-                readonly property bool shouldShowMenu: appMenuModel.menuAvailable && root.barVisible
-            }
-        }
+        readonly property bool shouldShowMenu: appMenuModel.menuAvailable && root.barVisible
     }
 
     fullRepresentation: Item {

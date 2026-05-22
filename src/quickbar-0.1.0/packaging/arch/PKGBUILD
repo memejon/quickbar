@@ -21,8 +21,6 @@ makedepends=(
     'cmake'
     'extra-cmake-modules'
     'gcc'
-    'kitemmodels'
-    'libxtst'
 )
 optdepends=(
     'dolphin: Finder-style desktop menu (Dolphin menu bar on desktop)'

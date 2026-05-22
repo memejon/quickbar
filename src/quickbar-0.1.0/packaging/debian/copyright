@@ -1,0 +1,28 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: quickbar
+Upstream-Contact: https://github.com/kevinbudz/quickbar/issues
+Source: https://github.com/kevinbudz/quickbar
+
+Files: *
+Copyright: Kevin Budz
+License: GPL-2.0-or-later
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in "/usr/share/common-licenses/GPL-2".
+
+Files: src/*
+Copyright: Kai Uwe Broulik and KDE contributors
+License: GPL-2.0-or-later
+
+Files: third_party/libdbusmenuqt/*
+Copyright: Canonical Ltd. and KDE contributors
+License: LGPL-2.1-or-later

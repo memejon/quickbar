@@ -10,14 +10,12 @@
 #include <QAction>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
-#include <QFontMetrics>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QScreen>
-#include <QStyleOptionMenuItem>
 #include <QTimer>
 #include <QWindow>
 
@@ -49,63 +47,6 @@ void setTransientParentIfPossible(QMenu *menu, QWindow *parentWindow)
     }
 }
 
-QString visibleMenuText(const QString &text)
-{
-    QString out;
-    out.reserve(text.size());
-    for (qsizetype i = 0; i < text.size(); ++i) {
-        const QChar ch = text.at(i);
-        if (ch == QLatin1Char('&')) {
-            if (i + 1 < text.size() && text.at(i + 1) == QLatin1Char('&')) {
-                out += QLatin1Char('&');
-                ++i;
-            }
-            continue;
-        }
-        out += ch;
-    }
-    return out;
-}
-
-void ensureMenuSizing(QMenu *menu)
-{
-    if (!menu) {
-        return;
-    }
-
-    for (QAction *action : menu->actions()) {
-        if (QMenu *subMenu = action->menu()) {
-            ensureMenuSizing(subMenu);
-        }
-    }
-
-    QStyle *style = menu->style();
-    int minWidth = 0;
-    for (QAction *action : menu->actions()) {
-        if (action->isSeparator()) {
-            continue;
-        }
-
-        QStyleOptionMenuItem option;
-        option.initFrom(menu);
-        option.font = menu->font();
-        option.fontMetrics = QFontMetrics(option.font);
-        option.text = visibleMenuText(action->text());
-        option.icon = action->icon();
-        option.menuItemType = action->menu() ? QStyleOptionMenuItem::SubMenu : QStyleOptionMenuItem::Normal;
-        option.state = action->isEnabled() ? QStyle::State_Enabled : QStyle::State_None;
-        option.rect = menu->rect();
-
-        const QSize itemSize = style->sizeFromContents(QStyle::CT_MenuItem, &option, QSize(), menu);
-        minWidth = qMax(minWidth, itemSize.width());
-    }
-
-    if (minWidth > 0) {
-        menu->setMinimumWidth(qMax(menu->minimumWidth(), minWidth));
-    }
-    menu->adjustSize();
-}
-
 void cloneMenuStructure(QMenu *sourceMenu, QMenu *destMenu)
 {
     destMenu->clear();
@@ -116,21 +57,17 @@ void cloneMenuStructure(QMenu *sourceMenu, QMenu *destMenu)
             continue;
         }
 
-        const QString label = visibleMenuText(sourceAction->text());
-
         if (QMenu *sourceSubMenu = sourceAction->menu()) {
-            QMenu *destSubMenu = destMenu->addMenu(label);
+            QMenu *destSubMenu = destMenu->addMenu(sourceAction->text());
             cloneMenuStructure(sourceSubMenu, destSubMenu);
             continue;
         }
 
-        QAction *clone = destMenu->addAction(label);
+        QAction *clone = destMenu->addAction(sourceAction->text());
         clone->setEnabled(sourceAction->isEnabled());
         clone->setShortcut(sourceAction->shortcut());
         QObject::connect(clone, &QAction::triggered, sourceAction, &QAction::trigger);
     }
-
-    ensureMenuSizing(destMenu);
 }
 } // namespace
 
@@ -229,10 +166,6 @@ void QuickBarApplet::setButtonGrid(QQuickItem *buttonGrid)
 QMenu *QuickBarApplet::createMenu(int idx) const
 {
     QMenu *menu = nullptr;
-
-    if (!m_model) {
-        return nullptr;
-    }
 
     if (view() == CompactView) {
         if (auto *menuAction = m_model->data(QModelIndex(), AppMenuModel::ActionRole).value<QAction *>()) {
@@ -356,17 +289,7 @@ void QuickBarApplet::trigger(QQuickItem *ctx, int idx)
                 menuAction->setMenu(m_currentMenu);
             }
         } else {
-            // CompactView: clone into a proxy menu; popping the DBus-imported menu
-            // directly can crash Qt/Wayland (same issue as FullView above).
-            if (!m_proxyMenu) {
-                m_proxyMenu = std::make_unique<QMenu>();
-                connect(m_proxyMenu.get(), &QMenu::aboutToHide, this, &QuickBarApplet::onMenuAboutToHide, Qt::UniqueConnection);
-            } else if (m_currentMenu && m_currentMenu->isVisible()) {
-                m_currentMenu->hide();
-            }
-
-            cloneMenuStructure(actionMenu, m_proxyMenu.get());
-            m_currentMenu = m_proxyMenu.get();
+            m_currentMenu = actionMenu;
             m_sourceMenu = actionMenu;
         }
 
@@ -394,13 +317,13 @@ void QuickBarApplet::trigger(QQuickItem *ctx, int idx)
                 return;
             }
             m_currentMenu->popup(pos);
-            setTransientParentIfPossible(m_currentMenu, ctx->window());
+            connect(actionMenu, &QMenu::aboutToHide, this, &QuickBarApplet::onMenuAboutToHide, Qt::UniqueConnection);
         }
 
         setCurrentIndex(idx);
 
         // FIXME TODO connect only once
-    } else if (m_model) { // is it just an action without a menu?
+    } else { // is it just an action without a menu?
         if (auto *action = m_model->index(idx, 0).data(AppMenuModel::ActionRole).value<QAction *>()) {
             Q_ASSERT(!action->menu());
             action->trigger();

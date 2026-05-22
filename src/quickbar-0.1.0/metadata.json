@@ -11,6 +11,7 @@
         "Description": "A replacement for KDE 6+'s Global Menu widget. ",
         "EnabledByDefault": true,
         "Icon": "show-menu",
+        "Id": "io.github.kevinbudz.quickbar",
         "License": "GPL-2.0-or-later",
         "Name": "quickbar",
         "Version": "0.1.0",
