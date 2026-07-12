@@ -36,7 +36,7 @@ class AppMenuModel : public QAbstractListModel
     Q_PROPERTY(bool enableGenericMenu READ enableGenericMenu WRITE setEnableGenericMenu NOTIFY enableGenericMenuChanged)
     Q_PROPERTY(bool enableMenuSearch READ enableMenuSearch WRITE setEnableMenuSearch NOTIFY enableMenuSearchChanged)
     Q_PROPERTY(QString applicationName READ applicationName NOTIFY applicationNameChanged)
-    Q_PROPERTY(bool allScreens READ allScreens WRITE setallScreens NOTIFY allScreensChanged)
+    Q_PROPERTY(bool allScreens READ allScreens WRITE setAllScreens NOTIFY allScreensChanged)
 
     Q_PROPERTY(Plasma::Types::ItemStatus containmentStatus MEMBER m_containmentStatus NOTIFY containmentStatusChanged)
     Q_PROPERTY(QRect screenGeometry READ screenGeometry WRITE setScreenGeometry NOTIFY screenGeometryChanged)
@@ -60,7 +60,7 @@ public:
     void setMenuAvailable(bool set);
 
     bool allScreens() const;
-    void setallScreens(bool allScreens);
+    void setAllScreens(bool allScreens);
 
     bool visible() const;
     bool menuForDisplay() const;
@@ -108,7 +108,7 @@ Q_SIGNALS:
     void visibleChanged();
 
 private:
-    bool m_menuAvailable;
+    bool m_menuAvailable = false;
     bool m_allScreens = true;
     bool m_updatePending = false;
     bool m_visible = true;
