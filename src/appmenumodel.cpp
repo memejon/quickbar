@@ -727,6 +727,7 @@ void AppMenuModel::updateApplicationMenu(const QString &serviceName, const QStri
 
             // cache first layer of sub menus, which we'll be popping up
             const auto actions = m_menu->actions();
+            QSet<QMenu *> submenuSet;
             for (QAction *a : actions) {
                 // signal dataChanged when the action changes
                 connect(a, &QAction::changed, this, [this, a] {
@@ -741,7 +742,8 @@ void AppMenuModel::updateApplicationMenu(const QString &serviceName, const QStri
 
                 connect(a, &QAction::destroyed, this, &AppMenuModel::modelNeedsUpdate);
 
-                if (a->menu()) {
+                if (a->menu() && !submenuSet.contains(a->menu())) {
+                    submenuSet.insert(a->menu());
                     m_importer->updateMenu(a->menu());
                 }
             }
