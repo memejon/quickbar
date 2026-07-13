@@ -46,8 +46,6 @@ QMenu *GenericMenu::create(QObject *parent)
     menu->setObjectName(QStringLiteral("quickbar-generic-menu"));
 
     auto *fileMenu = menu->addMenu(i18n("&File"));
-    auto *priorityAction = fileMenu->addAction(i18n("Set priority…"));
-    priorityAction->setEnabled(false);
 
     auto *signalMenu = fileMenu->addMenu(i18n("Send Signal"));
     addSignalAction(signalMenu, i18n("Suspend (STOP)"), SIGSTOP);
