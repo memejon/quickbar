@@ -20,6 +20,7 @@
 #include <QGuiApplication>
 #include <QKeyCombination>
 #include <QProcess>
+#include <QSet>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QVariantMap>
@@ -608,9 +609,10 @@ void MenuShortcutBridge::wireMenu(QMenu *menu)
         }
 
         const QKeySequence shortcut = action->shortcut();
+        // Use UniqueConnection to prevent duplicate connections if wireMenu called multiple times
         connect(action, &QAction::triggered, this, [this, shortcut] {
             scheduleSend(shortcut);
-        });
+        }, Qt::UniqueConnection);
     }
 }
 
