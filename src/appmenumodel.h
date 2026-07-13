@@ -11,6 +11,7 @@
 #include <QAction>
 #include <QPointer>
 #include <QRect>
+#include <QSet>
 #include <QStringList>
 #include <qqmlregistration.h>
 #include <tasksmodel.h>
@@ -85,7 +86,6 @@ public:
 
 Q_SIGNALS:
     void requestActivateIndex(int index);
-    void bringToFocus(int index);
     void requestOpenAbout();
 
 private Q_SLOTS:
@@ -118,6 +118,8 @@ private:
     bool m_enableMenuSearch = true;
     bool m_usingGenericMenu = false;
     QString m_applicationName;
+    QList<QAction *> m_cachedFlatActionList;
+    bool m_flatActionListDirty = true;
 
     Plasma::Types::ItemStatus m_containmentStatus = Plasma::Types::PassiveStatus;
 
@@ -142,6 +144,8 @@ private:
     QPointer<QMenu> m_menu;
     QPointer<QAction> m_searchAction;
     QList<QAction *> m_currentSearchActions;
+    QSet<QAction *> m_wiredGenericActions;
+    QSet<QAction *> m_wiredDBusActions;
 
     void removeSearchActionsFromMenu();
     void insertSearchActionsIntoMenu(const QString &filter = QString());
