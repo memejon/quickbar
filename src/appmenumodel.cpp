@@ -55,6 +55,7 @@ constexpr auto quitApplicationAction = "quitApplication";
 constexpr auto minimizeWindowAction = "minimizeWindow";
 constexpr auto maximizeWindowAction = "maximizeWindow";
 constexpr auto openAboutAction = "openAbout";
+constexpr int SHORTCUT_SEND_DELAY_MS = 100;
 
 QString processNameForPid(qint64 pid)
 {
@@ -169,7 +170,7 @@ bool AppMenuModel::allScreens() const
     return m_allScreens;
 }
 
-void AppMenuModel::setallScreens(bool allScreens)
+void AppMenuModel::setAllScreens(bool allScreens)
 {
     if (m_allScreens == allScreens) {
         return;
@@ -317,7 +318,9 @@ int AppMenuModel::rowCount(const QModelIndex &parent) const
 void AppMenuModel::removeSearchActionsFromMenu()
 {
     for (auto action : std::as_const(m_currentSearchActions)) {
-        m_searchAction->menu()->removeAction(action);
+        if (m_searchAction && m_searchAction->menu()) {
+            m_searchAction->menu()->removeAction(action);
+        }
     }
     m_currentSearchActions = QList<QAction *>();
 }
@@ -325,7 +328,7 @@ void AppMenuModel::removeSearchActionsFromMenu()
 void AppMenuModel::insertSearchActionsIntoMenu(const QString &filter)
 {
     removeSearchActionsFromMenu();
-    if (filter.isEmpty()) {
+    if (filter.isEmpty() || !m_searchAction) {
         return;
     }
     const auto actions = flatActionList();
@@ -406,6 +409,8 @@ void AppMenuModel::clearApplicationMenu()
     m_serviceWatcher->setWatchedServices({});
     m_importer.reset();
     m_menu.clear();
+    m_wiredDBusActions.clear();
+    m_flatActionListDirty = true;
     Q_EMIT modelNeedsUpdate();
 }
 
@@ -497,6 +502,12 @@ void AppMenuModel::wireGenericMenuActions(QMenu *menu)
 
     const auto actions = menu->findChildren<QAction *>();
     for (QAction *action : actions) {
+        // Skip if already wired to prevent duplicate connections (memory leak)
+        if (m_wiredGenericActions.contains(action)) {
+            continue;
+        }
+        m_wiredGenericActions.insert(action);
+
         if (action->property(processSignalProperty).isValid()) {
             connect(action, &QAction::triggered, this, [this, action] {
                 sendSignalToActiveTask(action->property(processSignalProperty).toInt());
@@ -568,6 +579,7 @@ void AppMenuModel::applyGenericMenu()
     }
 
     if (!m_genericMenu) {
+        m_wiredGenericActions.clear();
         m_genericMenu.reset(GenericMenu::create(this));
 
         m_shortcutBridge->wireMenu(m_genericMenu.get());
@@ -619,17 +631,25 @@ QHash<int, QByteArray> AppMenuModel::roleNames() const
 
 QList<QAction *> AppMenuModel::flatActionList()
 {
-    QList<QAction *> ret;
-    if (!m_menuAvailable || !m_menu) {
-        return ret;
+    // Return cached list if valid
+    if (!m_flatActionListDirty) {
+        return m_cachedFlatActionList;
     }
+
+    m_cachedFlatActionList.clear();
+    if (!m_menuAvailable || !m_menu) {
+        m_flatActionListDirty = false;
+        return m_cachedFlatActionList;
+    }
+    
     const auto actions = m_menu->findChildren<QAction *>();
     for (auto &action : actions) {
         if (action->menu() == nullptr) {
-            ret << action;
+            m_cachedFlatActionList << action;
         }
     }
-    return ret;
+    m_flatActionListDirty = false;
+    return m_cachedFlatActionList;
 }
 
 QVariant AppMenuModel::data(const QModelIndex &index, int role) const
@@ -703,7 +723,7 @@ void AppMenuModel::updateApplicationMenu(const QString &serviceName, const QStri
         QMetaObject::invokeMethod(m_importer.get(), "updateMenu", Qt::QueuedConnection);
 
         connect(m_importer.get(), &DBusMenuImporter::menuUpdated, this, [=, this](QMenu *menu) {
-            m_menu = m_importer->menu();
+            // Validate menu still exists and is current
             if (m_menu.isNull() || menu != m_menu) {
                 return;
             }
@@ -728,7 +748,17 @@ void AppMenuModel::updateApplicationMenu(const QString &serviceName, const QStri
             // cache first layer of sub menus, which we'll be popping up
             const auto actions = m_menu->actions();
             QSet<QMenu *> submenuSet;
-            for (QAction *a : actions) {
+            QModelIndexList changedIndices;
+            
+            for (int i = 0; i < actions.count(); ++i) {
+                QAction *a = actions.at(i);
+                
+                // Skip if already wired to prevent duplicate connections
+                if (m_wiredDBusActions.contains(a)) {
+                    continue;
+                }
+                m_wiredDBusActions.insert(a);
+                
                 // signal dataChanged when the action changes
                 connect(a, &QAction::changed, this, [this, a] {
                     if (m_menuAvailable && m_menu) {
@@ -746,14 +776,22 @@ void AppMenuModel::updateApplicationMenu(const QString &serviceName, const QStri
                     submenuSet.insert(a->menu());
                     m_importer->updateMenu(a->menu());
                 }
+                
+                changedIndices << index(i, 0);
             }
-
+            
+            // Batch emit dataChanged for performance
+            if (!changedIndices.isEmpty()) {
+                Q_EMIT dataChanged(changedIndices.first(), changedIndices.last());
+            }
+            
+            // Invalidate flat action cache
+            m_flatActionListDirty = true;
             setMenuAvailable(true);
             Q_EMIT modelNeedsUpdate();
         });
 
         connect(m_importer.get(), &DBusMenuImporter::actionActivationRequested, this, [this](QAction *action) {
-            // TODO submenus
             if (!m_menuAvailable || !m_menu) {
                 return;
             }
